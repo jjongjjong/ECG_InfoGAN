@@ -32,7 +32,7 @@ data_folder_dir = params['folder_dir']
 filepathList = filepathList_gen(data_folder_dir,params['sample_run'])
 ecg_dataset = ECG_dataset(filepathList,freq=params['freq'],length=params['length'],
                           norm=params['norm'],sample_step=params['sample_step'])
-ecg_dataloader = DataLoader(ecg_dataset,params['batch_size'],True,num_workers=2,drop_last=True)
+ecg_dataloader = DataLoader(ecg_dataset,params['batch_size'],True,num_workers=4,drop_last=True)
 print('Finish data load')
 
 # Initialize the network
@@ -145,10 +145,10 @@ for epoch in range(params['num_epochs']):
         optimG.step()
 
         # Check progress of training.
-        if i != 0 and i%100 == 0:
-            print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
-                  % (epoch+1, params['num_epochs'], i, len(ecg_dataloader),
-                    D_loss.item(), G_loss.item()))
+        # if i != 0 and i%100 == 0:
+        print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
+              % (epoch+1, params['num_epochs'], i, len(ecg_dataloader),
+                D_loss.item(), G_loss.item()))
 
         # Save the losses for plotting.
         G_losses.append(G_loss.item())

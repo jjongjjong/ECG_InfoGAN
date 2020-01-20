@@ -25,7 +25,7 @@ class ECG_dataset (Dataset):
         if self.norm:
             ecg_mean = ecg_arr.mean(keepdims=True)
             ecg_std = ecg_arr.std(keepdims=True)
-            ecg_arr = ecg_arr - ecg_mean/ecg_std
+            ecg_arr = (ecg_arr - ecg_mean)/(ecg_std+2e-100)
 
         ecg_arr = ecg_arr[::self.sample_step]
 

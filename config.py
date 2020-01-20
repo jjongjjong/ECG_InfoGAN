@@ -1,13 +1,13 @@
 params = {
-    'batch_size': 2048,# Batch size.
+    'batch_size': 1024,# Batch size.
     'num_epochs': 100,# Number of epochs to train for.
     'learning_rate': 2e-5,# Learning rate.
     'beta1': 0.5,
     'beta2': 0.999,
-    'save_epoch' : 10,    # After how many epochs to save checkpoints and generate test output.
+    'save_epoch' : 1,    # After how many epochs to save checkpoints and generate test output.
     'folder_dir':'/home/jjong/jjong/workplace/datastorage/share',
     'GPU':0,
-    'sample_run':True,
+    'sample_run':False,
 
     'freq':500,
     'length':2048,
