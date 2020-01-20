@@ -30,9 +30,9 @@ class ECG_dataset (Dataset):
         ecg_arr = ecg_arr[::self.sample_step]
 
         assert len(ecg_arr<=self.length), print('ecg_arr[{}] is shorten than the length [{}]'.format(len(ecg_arr,self.length)))
-        ecg_arr = ecg_arr[:self.length]
+        ecg_arr = ecg_arr[:self.length].reshape(1,-1)
 
-        return torch.from_numpy(ecg_arr),torch.tensor(ecg_mean[0]),torch.tensor(ecg_std[0])
+        return torch.from_numpy(ecg_arr).float(),torch.tensor(ecg_mean[0]),torch.tensor(ecg_std[0])
 
 
 

@@ -13,6 +13,8 @@ from ECG_dataset import ECG_dataset
 from utils import *
 from config import params
 
+from torch.utils.tensorboard import SummaryWriter
+
 # set env settings
 seed = 1122
 random.seed(seed)
@@ -23,6 +25,8 @@ device = "cuda:{}".format(params['GPU']) if (torch.cuda.is_available() and param
 device = torch.device(device)
 print(device, ' is used.\n')
 
+writer = SummaryWriter()
+
 #Load dataset and dataloader
 data_folder_dir = params['folder_dir']
 filepathList = filepathList_gen(data_folder_dir,params['sample_run'])
@@ -32,7 +36,7 @@ ecg_dataloader = DataLoader(ecg_dataset,params['batch_size'],True,num_workers=2,
 print('Finish data load')
 
 # Initialize the network
-netG = Generator().to(device)
+netG = Generator(params['n_z']+params['n_con_c']+params['n_dis_c']*params['dis_c_dim']).to(device)
 netG.apply(weight_init)
 print(netG)
 
@@ -62,7 +66,7 @@ optimG = optim.Adam([{'params': netG.parameters()}, {'params': netQ.parameters()
                     betas=(params['beta1'], params['beta2']))
 
 
-fixed_noise = noise_sample(params['n_dis_c'],params['dis_c_dim'],params['n_con_c'],params['n_z'],100,device)
+fixed_noise,idx = noise_sample(params['n_dis_c'],params['dis_c_dim'],params['n_con_c'],params['n_z'],10,device)
 
 real_label,fake_label = 1,0
 
@@ -73,7 +77,7 @@ D_losses = []
 
 print("-"*25)
 print("Starting Training Loop...\n")
-print('Epochs: %d\nDataset: {}\nBatch Size: %d\nLength of Data Loader: %d'.format(params['dataset']) % (params['num_epochs'], params['batch_size'], len(dataloader)))
+print('Epochs: %d\nDataset: {}\nBatch Size: %d\nLength of Data Loader: %d'.format('ECG_dataset') % (params['num_epochs'], params['batch_size'], len(ecg_dataloader)))
 print("-"*25)
 
 start_time = time.time()
@@ -82,12 +86,11 @@ iters = 0
 for epoch in range(params['num_epochs']):
     epoch_start_time = time.time()
 
-    for i, (data, _) in enumerate(ecg_dataloader, 0):
+    for i, (data,mean,std) in enumerate(ecg_dataloader, 0):
         # Get batch size
         b_size = data.size(0)
         # Transfer data tensor to GPU/CPU (device)
         real_data = data.to(device)
-
         # Updating discriminator and DHead
         optimD.zero_grad()
         # Real data
@@ -100,7 +103,7 @@ for epoch in range(params['num_epochs']):
 
         # Fake data
         label.fill_(fake_label)
-        noise, idx = noise_sample(params['num_dis_c'], params['dis_c_dim'], params['num_con_c'], params['num_z'], b_size, device)
+        noise, idx = noise_sample(params['n_dis_c'], params['dis_c_dim'], params['n_con_c'], params['n_z'], b_size, device)
         fake_data = netG(noise)
         output2 = discriminator(fake_data.detach())
         probs_fake = netD(output2).view(-1)
@@ -126,13 +129,13 @@ for epoch in range(params['num_epochs']):
         target = torch.LongTensor(idx).to(device)
         # Calculating loss for discrete latent code.
         dis_loss = 0
-        for j in range(params['num_dis_c']):
+        for j in range(params['n_dis_c']):
             dis_loss += criterionQ_dis(q_logits[:, j*10 : j*10 + 10], target[j])
 
         # Calculating loss for continuous latent code.
         con_loss = 0
-        if (params['num_con_c'] != 0):
-            con_loss = criterionQ_con(noise[:, (-1)*params['num_con_c']: ].view(-1, params['num_con_c']), q_mu, q_var)*0.1 #?
+        if (params['n_con_c'] != 0):
+            con_loss = criterionQ_con(noise[:, (-1)*params['n_con_c']: ].view(-1, params['n_con_c']), q_mu, q_var)*0.1 #?
 
         # Net loss for generator.
         G_loss = gen_loss + dis_loss + con_loss
@@ -151,15 +154,24 @@ for epoch in range(params['num_epochs']):
         G_losses.append(G_loss.item())
         D_losses.append(D_loss.item())
 
+        writer.add_scalar('Loss/Gen',G_loss.item(),iters)
+        writer.add_scalar('Loss/Dis',D_loss.item(),iters)
+
         iters += 1
 
     epoch_time = time.time() - epoch_start_time
     print("Time taken for Epoch %d: %.2fs" %(epoch + 1, epoch_time))
-    # # Generate image after each epoch to check performance of the generator. Used for creating animated gif later.
-    # with torch.no_grad():
-    #     gen_data = netG(fixed_noise).detach().cpu()
-    # img_list.append(vutils.make_grid(gen_data, nrow=10, padding=2, normalize=True))
-    #
+
+    # Generate image after each epoch to check performance of the generator. Used for creating animated gif later.
+    with torch.no_grad():
+        gen_data = netG(fixed_noise).detach().cpu()
+
+    for i,gen in enumerate(gen_data):
+        gen.squeeze_(0)
+        image = gen_plot(gen.numpy(),i)
+        writer.add_image('/GEN/Image_{}/'.format(i),image)
+    #img_list.append(plt.plot(gen_data[0].numpy()))
+
     # # Generate image to check performance of generator.
     # if((epoch+1) == 1 or (epoch+1) == params['num_epochs']/2):
     #     with torch.no_grad():
@@ -181,7 +193,7 @@ for epoch in range(params['num_epochs']):
             'optimD' : optimD.state_dict(),
             'optimG' : optimG.state_dict(),
             'params' : params
-            }, 'checkpoint/model_epoch_%d_{}'.format(params['dataset']) %(epoch+1))
+            }, '../save/model_epoch_%d'.format('ECG_dataset') %(epoch+1))
 
 training_time = time.time() - start_time
 print("-"*50)

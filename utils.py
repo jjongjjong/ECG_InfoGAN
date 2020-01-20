@@ -3,6 +3,10 @@ import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
 import os
+import matplotlib.pyplot as plt
+import PIL
+from torchvision.transforms import ToTensor
+import io
 
 class NormalNLLLoss:  # THIS IS THE WAY TO CUSTERMIZE LOSS FUNCTION!!!
     def __call__(self,x,mu,var):
@@ -117,3 +121,17 @@ def weight_init(m):
                 init.orthogonal_(param.data)
             else:
                 init.normal_(param.data)
+
+
+def gen_plot(data,idx):
+    plt.figure()
+    plt.plot(data)
+    plt.title(idx)
+    buf = io.BytesIO()
+    plt.savefig(buf,format='jpeg')
+    buf.seek(0)
+
+    image = PIL.Image.open(buf)
+    image = ToTensor()(image)
+    plt.close()
+    return image
