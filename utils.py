@@ -1,15 +1,8 @@
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import numpy as np
-
-
-def weight_init(m):
-    if(type(m)==nn.ConvTranspose1d or type(m)==nn.Conv1d):
-        nn.init.normal_(m.weight.data,0.0,0.02)
-    elif (type(m))==nn.BatchNorm1d:
-        nn.init.normal_(m.weight.data,0.0,0.02)
-        nn.init.constant_(m.weight.data,0.0,)
-
+import os
 
 class NormalNLLLoss:  # THIS IS THE WAY TO CUSTERMIZE LOSS FUNCTION!!!
     def __call__(self,x,mu,var):
@@ -39,6 +32,88 @@ def noise_sample(n_dis_c,dis_c_dim,n_con_c,n_z,batch_size,device):
     return z, idx
 
 
+def absoluteFilePaths(directory):
+    for dirpath,_,filenames in os.walk(directory):
+        for f in filenames:
+            yield os.path.abspath(os.path.join(dirpath, f))
 
+def filepathList_gen(directory:str,sample_run:bool) -> list:
+    filepathList = []
+    pathgen = absoluteFilePaths(directory)
 
+    if sample_run:
+        for i,path in enumerate(pathgen):
+            filepathList.append(path)
+            if i>500:
+                break
+    else :
+        filepathList = [path for path in pathgen]
 
+    return filepathList
+
+def weight_init(m):
+    '''
+    Usage:
+        model = Model()
+        model.apply(weight_init)
+    '''
+    if isinstance(m, nn.Conv1d):
+        init.normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.Conv2d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.Conv3d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.ConvTranspose1d):
+        init.normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.ConvTranspose2d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.ConvTranspose3d):
+        init.xavier_normal_(m.weight.data)
+        if m.bias is not None:
+            init.normal_(m.bias.data)
+    elif isinstance(m, nn.BatchNorm1d):
+        init.normal_(m.weight.data, mean=1, std=0.02)
+        init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.BatchNorm2d):
+        init.normal_(m.weight.data, mean=1, std=0.02)
+        init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.BatchNorm3d):
+        init.normal_(m.weight.data, mean=1, std=0.02)
+        init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.Linear):
+        init.xavier_normal_(m.weight.data)
+        init.normal_(m.bias.data)
+    elif isinstance(m, nn.LSTM):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.LSTMCell):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.GRU):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
+    elif isinstance(m, nn.GRUCell):
+        for param in m.parameters():
+            if len(param.shape) >= 2:
+                init.orthogonal_(param.data)
+            else:
+                init.normal_(param.data)
