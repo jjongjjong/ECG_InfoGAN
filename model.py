@@ -9,13 +9,23 @@ class Generator(nn.Module):
         # start // torch.nn.ConvTranspose1d(10, 10, kernel_size=4, stride=1, padding=0, output_padding=0)
         # x2 // torch.nn.ConvTranspose1d(10, 10, kernel_size=4, stride=2, padding=1, output_padding=0)
         # x4 //  torch.nn.ConvTranspose1d(10, 10, kernel_size=8, stride=4, padding=2, output_padding=0)
+        self.noise_n = noise_n
+        self.fc = nn.Sequential(
+            nn.Linear(noise_n,noise_n*2),
+            nn.BatchNorm1d(noise_n*2),
+            nn.ReLU(),
+
+            nn.Linear(noise_n*2,noise_n*4),
+            nn.BatchNorm1d(noise_n*4),
+            nn.ReLU()
+        )
 
         self.tconv1 = nn.Sequential(
-            nn.ConvTranspose1d(noise_n,noise_n*2,kernel_size=4,stride=1,bias=False), # 1->4
+            nn.ConvTranspose1d(noise_n,noise_n*2,kernel_size=4,stride=2,padding=1,bias=False), # 4->8
             nn.BatchNorm1d(noise_n*2)
         )
         self.tconv2 = nn.Sequential(
-            nn.ConvTranspose1d(noise_n*2,512,kernel_size=8,stride=4,padding=2,output_padding=0,bias=False), #4->16
+            nn.ConvTranspose1d(noise_n*2,512,kernel_size=4,stride=2,padding=1,output_padding=0,bias=False), #8->16
             nn.BatchNorm1d(512)
         )
         self.tconv3 = nn.Sequential(
@@ -23,18 +33,20 @@ class Generator(nn.Module):
             nn.BatchNorm1d(256)
         )
         self.tconv4 = nn.ConvTranspose1d(256,128,kernel_size=8,stride=4,padding=2,output_padding=0) #64->256
-        self.tconv5 = nn.ConvTranspose1d(128,64,kernel_size=8,stride=4,padding=2,output_padding=0)#256->1024
-        self.tconv6 = nn.ConvTranspose1d(64,1,kernel_size=4,stride=2,padding=1,output_padding=0) #1024->2048
+        self.tconv5 = nn.ConvTranspose1d(128,64,kernel_size=4,stride=2,padding=1,output_padding=0)#256->512
+        self.tconv6 = nn.ConvTranspose1d(64,1,kernel_size=4,stride=2,padding=1,output_padding=0) #512->1024
         #self.tconv_single = nn.ConvTranspose1d(32,1,1)
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.fc(x.squeeze(2))
+        x = x.view(-1,self.noise_n,4)
         x = F.leaky_relu(self.tconv1(x))
         x = F.leaky_relu(self.tconv2(x))
         x = F.leaky_relu(self.tconv3(x))
-        x = self.tconv4(x)
-        x = self.tconv5(x)
-        x = self.tconv6(x)
+        x = F.leaky_relu(self.tconv4(x))
+        x = F.leaky_relu(self.tconv5(x))
+        x = F.sigmoid(self.tconv6(x))
 
         return x
 
@@ -44,7 +56,7 @@ class Discriminator(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv1d(1,16,kernel_size=7,stride=4,padding=3), #2048->512
+            nn.Conv1d(1,16,kernel_size=7,stride=2,padding=3), #1024->512
             nn.LeakyReLU(0.1),
 
             nn.Conv1d(16, 32, kernel_size=7, stride=4, padding=3), #512->128

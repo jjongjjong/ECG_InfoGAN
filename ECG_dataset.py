@@ -7,7 +7,7 @@ import os
 import pickle
 
 class ECG_dataset (Dataset):
-    def __init__(self,filepathList:list,freq:float,sample_step:float,length:int,norm:bool) -> (torch.Tensor,torch.FloatTensor,torch.IntTensor) :
+    def __init__(self,filepathList:list,freq:float,sample_step:float,length:int,norm:str) -> (torch.Tensor,torch.FloatTensor,torch.IntTensor) :
         self.filepathList = filepathList
         self.freq = freq
         self.sample_step = sample_step
@@ -22,10 +22,14 @@ class ECG_dataset (Dataset):
         ecg_arr = pickle.load(open(self.filepathList[idx],'rb'))
         ecg_mean = 0
         ecg_std = 1
-        if self.norm:
+        if self.norm=='zero':
             ecg_mean = ecg_arr.mean(keepdims=True)
             ecg_std = ecg_arr.std(keepdims=True)
             ecg_arr = (ecg_arr - ecg_mean)/(ecg_std+2e-100)
+        elif self.norm=='minmax':
+            ecg_min = ecg_arr.min(keepdims=True)
+            ecg_max = ecg_arr.max(keepdims=True)
+            ecg_arr = (ecg_arr-ecg_min)/(ecg_max-ecg_min+2e-100)
 
         ecg_arr = ecg_arr[::self.sample_step]
 

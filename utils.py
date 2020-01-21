@@ -48,7 +48,7 @@ def filepathList_gen(directory:str,sample_run:bool) -> list:
     if sample_run:
         for i,path in enumerate(pathgen):
             filepathList.append(path)
-            if i>500:
+            if i>1025:
                 break
     else :
         filepathList = [path for path in pathgen]

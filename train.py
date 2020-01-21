@@ -32,7 +32,7 @@ data_folder_dir = params['folder_dir']
 filepathList = filepathList_gen(data_folder_dir,params['sample_run'])
 ecg_dataset = ECG_dataset(filepathList,freq=params['freq'],length=params['length'],
                           norm=params['norm'],sample_step=params['sample_step'])
-ecg_dataloader = DataLoader(ecg_dataset,params['batch_size'],True,num_workers=4,drop_last=True)
+ecg_dataloader = DataLoader(ecg_dataset,params['batch_size'],True,num_workers=8,drop_last=True)
 print('Finish data load')
 
 # Initialize the network
@@ -115,7 +115,6 @@ for epoch in range(params['num_epochs']):
         D_loss = loss_real + loss_fake
         # Update parameters
         optimD.step()
-
         # Updating Generator and QHead
         optimG.zero_grad()
 
@@ -146,9 +145,9 @@ for epoch in range(params['num_epochs']):
 
         # Check progress of training.
         # if i != 0 and i%100 == 0:
-        print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
+        print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f [%.1f+%.1f+%.1f]'
               % (epoch+1, params['num_epochs'], i, len(ecg_dataloader),
-                D_loss.item(), G_loss.item()))
+                D_loss.item(), G_loss.item(),gen_loss.item(),dis_loss.item(),con_loss.item()))
 
         # Save the losses for plotting.
         G_losses.append(G_loss.item())
@@ -159,17 +158,27 @@ for epoch in range(params['num_epochs']):
 
         iters += 1
 
+        # Generate image after each epoch to check performance of the generator. Used for creating animated gif later.
+        if i %25==0:
+            with torch.no_grad():
+                gen_data = netG(fixed_noise).detach().cpu()
+
+            for j, gen in enumerate(gen_data):
+                gen.squeeze_(0)
+                image = gen_plot(gen.numpy(), j)
+                writer.add_image('GEN/Image_{}/'.format(j), image)
+
+            for j,real in enumerate(real_data):
+                if j>=10: break
+                real = real.detach().cpu().squeeze(0)
+                image = gen_plot(real.numpy(),j)
+                writer.add_image('REAL/Image_{}'.format(j),image)
+
+
     epoch_time = time.time() - epoch_start_time
     print("Time taken for Epoch %d: %.2fs" %(epoch + 1, epoch_time))
 
-    # Generate image after each epoch to check performance of the generator. Used for creating animated gif later.
-    with torch.no_grad():
-        gen_data = netG(fixed_noise).detach().cpu()
 
-    for i,gen in enumerate(gen_data):
-        gen.squeeze_(0)
-        image = gen_plot(gen.numpy(),i)
-        writer.add_image('/GEN/Image_{}/'.format(i),image)
     #img_list.append(plt.plot(gen_data[0].numpy()))
 
     # # Generate image to check performance of generator.
