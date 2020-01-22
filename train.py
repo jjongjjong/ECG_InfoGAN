@@ -131,7 +131,7 @@ for epoch in range(params['num_epochs']):
         for j in range(params['n_dis_c']):
             dis_loss += criterionQ_dis(q_logits[:, j*10 : j*10 + 10], target[j])
 
-        # Calculating loss for continuous latent code.
+        # Calculating loss for continuous latent code.!!!
         con_loss = 0
         if (params['n_con_c'] != 0):
             con_loss = criterionQ_con(noise[:, (-1)*params['n_con_c']: ].view(-1, params['n_con_c']), q_mu, q_var)*0.1 #?
