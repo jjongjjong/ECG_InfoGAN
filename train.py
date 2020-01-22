@@ -137,7 +137,14 @@ for epoch in range(params['num_epochs']):
             con_loss = criterionQ_con(noise[:, (-1)*params['n_con_c']: ].view(-1, params['n_con_c']), q_mu, q_var)*0.1 #?
 
         # Net loss for generator.
-        G_loss = gen_loss + dis_loss + con_loss
+        gen_loss*=100
+        dis_loss*=10
+        con_loss*=0.01
+
+        weight = kl_anneal_function('logistic',iters)
+        weight = weight if weight>0.5 else 0
+
+        G_loss = gen_loss + weight*dis_loss + weight*con_loss
         # Calculate gradients.
         G_loss.backward()
         # Update parameters.

@@ -55,6 +55,12 @@ def filepathList_gen(directory:str,sample_run:bool) -> list:
 
     return filepathList
 
+def kl_anneal_function(anneal_function, step, k=0.0025, x0=2500):
+    if anneal_function == 'logistic':
+        return float(1/(1+np.exp(-k*(step-x0))))
+    elif anneal_function == 'linear':
+        return min(1, step/x0)
+
 def weight_init(m):
     '''
     Usage:

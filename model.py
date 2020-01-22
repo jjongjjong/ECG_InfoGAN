@@ -7,8 +7,8 @@ class Generator(nn.Module):
         super().__init__()
 
         # start // torch.nn.ConvTranspose1d(10, 10, kernel_size=4, stride=1, padding=0, output_padding=0)
-        # x2 // torch.nn.ConvTranspose1d(10, 10, kernel_size=4, stride=2, padding=1, output_padding=0)
-        # x4 //  torch.nn.ConvTranspose1d(10, 10, kernel_size=8, stride=4, padding=2, output_padding=0)
+        # x2 // torch.nn.ConvTranspose1d(10, 10, kernel_size=4, stride=2, padding=1, output_padding=0)  16,2,7
+        # x4 //  torch.nn.ConvTranspose1d(10, 10, kernel_size=8, stride=4, padding=2, output_padding=0) 16,4,6
         self.noise_n = noise_n
         self.fc = nn.Sequential(
             nn.Linear(noise_n,noise_n*2),
@@ -21,22 +21,23 @@ class Generator(nn.Module):
         )
 
         self.tconv1 = nn.Sequential(
-            nn.ConvTranspose1d(noise_n,noise_n*2,kernel_size=4,stride=2,padding=1,bias=False), # 4->8
+            nn.ConvTranspose1d(noise_n,noise_n*2,kernel_size=16,stride=2,padding=7,bias=False), # 4->8
             nn.BatchNorm1d(noise_n*2)
         )
         self.tconv2 = nn.Sequential(
-            nn.ConvTranspose1d(noise_n*2,512,kernel_size=4,stride=2,padding=1,output_padding=0,bias=False), #8->16
+            nn.ConvTranspose1d(noise_n*2,512,kernel_size=16,stride=2,padding=7,output_padding=0,bias=False), #8->16
             nn.BatchNorm1d(512)
         )
         self.tconv3 = nn.Sequential(
-            nn.ConvTranspose1d(512,256,kernel_size=8,stride=4,padding=2,output_padding=0,bias=False), #16->64
+            nn.ConvTranspose1d(512,256,kernel_size=16,stride=4,padding=6,output_padding=0,bias=False), #16->64
             nn.BatchNorm1d(256)
         )
-        self.tconv4 = nn.ConvTranspose1d(256,128,kernel_size=8,stride=4,padding=2,output_padding=0) #64->256
-        self.tconv5 = nn.ConvTranspose1d(128,64,kernel_size=4,stride=2,padding=1,output_padding=0)#256->512
-        self.tconv6 = nn.ConvTranspose1d(64,1,kernel_size=4,stride=2,padding=1,output_padding=0) #512->1024
+        self.tconv4 = nn.ConvTranspose1d(256,128,kernel_size=16,stride=4,padding=6,output_padding=0) #64->256
+        self.tconv5 = nn.ConvTranspose1d(128,64,kernel_size=16,stride=2,padding=7,output_padding=0)#256->512
+        self.tconv6 = nn.ConvTranspose1d(64,8,kernel_size=16,stride=2,padding=7,output_padding=0) #512->1024
+        self.tconv7 = nn.Conv1d(8,1,kernel_size=1)
         #self.tconv_single = nn.ConvTranspose1d(32,1,1)
-
+        #self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.fc(x.squeeze(2))
@@ -46,7 +47,8 @@ class Generator(nn.Module):
         x = F.leaky_relu(self.tconv3(x))
         x = F.leaky_relu(self.tconv4(x))
         x = F.leaky_relu(self.tconv5(x))
-        x = F.sigmoid(self.tconv6(x))
+        x = self.tconv6(x)
+        x = self.tconv7(x)
 
         return x
 
@@ -58,17 +60,21 @@ class Discriminator(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv1d(1,16,kernel_size=7,stride=2,padding=3), #1024->512
             nn.LeakyReLU(0.1),
+            nn.Dropout(0.2),
 
             nn.Conv1d(16, 32, kernel_size=7, stride=4, padding=3), #512->128
             nn.LeakyReLU(0.1),
+            nn.Dropout(0.2),
 
             nn.Conv1d(32, 64, kernel_size=7, stride=4, padding=3,bias=False), #128->32
             nn.BatchNorm1d(64),
             nn.LeakyReLU(0.1),
+            nn.Dropout(0.2),
 
             nn.Conv1d(64, 128, kernel_size=7, stride=2, padding=3,bias=False), #32->16
             nn.BatchNorm1d(128),
             nn.LeakyReLU(0.1),
+            nn.Dropout(0.2),
 
             nn.Conv1d(128, 256, kernel_size=7, stride=2, padding=3,bias=False), #16->8
             nn.BatchNorm1d(256),

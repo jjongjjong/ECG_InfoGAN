@@ -12,7 +12,7 @@ params = {
     'freq':500,
     'length':1024,
     'sample_step':2,
-    'norm':'minmax',
+    'norm':'zero',
 
     'n_z':128,
     'n_dis_c':1,

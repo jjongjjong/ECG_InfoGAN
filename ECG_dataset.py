@@ -20,8 +20,7 @@ class ECG_dataset (Dataset):
 
     def __getitem__(self, idx):
         ecg_arr = pickle.load(open(self.filepathList[idx],'rb'))
-        ecg_mean = 0
-        ecg_std = 1
+
         if self.norm=='zero':
             ecg_mean = ecg_arr.mean(keepdims=True)
             ecg_std = ecg_arr.std(keepdims=True)
@@ -36,8 +35,10 @@ class ECG_dataset (Dataset):
         assert len(ecg_arr<=self.length), print('ecg_arr[{}] is shorten than the length [{}]'.format(len(ecg_arr,self.length)))
         ecg_arr = ecg_arr[:self.length].reshape(1,-1)
 
-        return torch.from_numpy(ecg_arr).float(),torch.tensor(ecg_mean[0]),torch.tensor(ecg_std[0])
-
+        if self.norm=='zero':
+            return torch.from_numpy(ecg_arr).float(),torch.tensor(ecg_mean[0]),torch.tensor(ecg_std[0])
+        elif self.norm=='minmax':
+            return torch.from_numpy(ecg_arr).float(),torch.tensor(ecg_min[0]),torch.tensor(ecg_max[0])
 
 
 
